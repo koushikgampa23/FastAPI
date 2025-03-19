@@ -152,6 +152,12 @@
             if book.id == book_id:
                 return {"data": book}
         raise HTTPException(status_code=404, detail="book not found")
+## sqlalchemy
+    Sqlalchemy is a ORM which is what our fastapi application is going to use, to create database and be able to create a connection with database.
+    Being able to use all the database records in the application.
+    install sqlalchemy:
+        pip install sqlalchemy
+        
 
     
             
