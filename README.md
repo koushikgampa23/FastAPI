@@ -157,6 +157,62 @@
     Being able to use all the database records in the application.
     install sqlalchemy:
         pip install sqlalchemy
+### Create database and connect postgres db
+    Install sqlalchemy
+    Step1) Create a database.py file inside a TodoApp folder
+        Code:
+            from sqlalchemy import create_engine
+            from sqlalchemy.orm import sessionmaker
+            from sqlalchemy.ext.declarative import declarative_base
+            
+            # SQLALCHEMY_DATABASE_URL = "sqlite:///./users.db"
+            SQLALCHEMY_DATABASE_URL = 'postgresql://postgres:koushik@localhost:5488/new_db'
+            
+            engine = create_engine(SQLALCHEMY_DATABASE_URL)
+            
+            SessionLocal = sessionmaker(autoflush=False, autocommit=False, bind=engine)
+            
+            Base = declarative_base()
+            
+            def get_db():
+                db = SessionLocal()
+                try:
+                    yield db
+                finally:
+                    db.close()
+                    
+    Step2) Create a models.py file to add table in it
+        Code:
+            from database import Base
+            from sqlalchemy import Column, Integer, String, Boolean
+            
+            class Todos(Base):
+                __tablename__ = 'todos' # Naming table
+            
+                id = Column(Integer, primary_key=True, index=True) # Id column
+                title = Column(String)
+                description = Column(String)
+                priority = Column(Integer)
+                complete = Column(Boolean, default=False)
+                
+    Step3) Create a main.py that is the entry of the project
+        Code:
+            from fastapi import FastAPI
+            from models import Base
+            from database import engine
+            
+            app = FastAPI()
+            
+            Base.metadata.create_all(bind=engine) # will create everything from database.py file and models.py file to be able to create database with todo tables
+    Step4) Run the application
+        uvicorn main:app --reload
+    Step5) See the results in pgadmin
+    
+        
+
+
+
+    
         
 
     
