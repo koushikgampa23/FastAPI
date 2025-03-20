@@ -275,6 +275,8 @@
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo id not found")
             db.query(Todos).filter(Todos.id == todo_id).delete()
             db.commit()
+### Adding routers
+
 
 
         
