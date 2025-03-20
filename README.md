@@ -275,8 +275,173 @@
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo id not found")
             db.query(Todos).filter(Todos.id == todo_id).delete()
             db.commit()
-### Adding routers
+## Routers
+### add router basic
+    Step1) Create a router folder add this file auth.py
+        from fastapi import APIRouter
+        router = APIRouter()
+        @router.get("/auth/")
+        async def get_todo():
+            return {"msg":"inside some auth router"}
+    Step2) In the main.py import router
+        from router import auth,todos
+        app.include_router(auth)
+        app.include_router(todos)
+### Updated main, todos app
+    main.py
+        from fastapi import FastAPI
+        from models import Base
+        from database import engine
+        from routers import auth, todos
+        
+        app = FastAPI()
+        
+        Base.metadata.create_all(bind=engine) # will create everything from database.py file and models.py file to be able to create database with todo tables
+        app.include_router(auth.router)
+        app.include_router(todos.router)
+    todos.py
+        from typing import Annotated
+        from fastapi import Depends, APIRouter, HTTPException, Path, status
+        from pydantic import BaseModel, Field
+        from models import Todos
+        from database import SessionLocal
+        from sqlalchemy.orm import Session
+        
+        router = APIRouter()
+        
+        def get_db():
+            db = SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+        
+        db_dependency = Annotated[Session, Depends(get_db)]
+        # Depends is Dependency injection means we want to do something before it executes 
+        # That allows us to do something behind the scenes and then inject the dependencies that our function relies on
+        
+        class TodoRequest(BaseModel):
+            title: str = Field(min_length=3, max_length=100)
+            description: str
+            priority: int
+            complete: bool
+        
+        @router.get("/todo/", status_code=status.HTTP_200_OK)
+        async def get_home(db: db_dependency):
+            return db.query(Todos).all()
+        
+        @router.get("/todo/{todo_id}/", status_code=status.HTTP_200_OK)
+        async def get_todo_details(db: db_dependency, todo_id: int = Path(gt=0)): # Here if the todo_id <0 it will throw exception that is default validation happening no need to exceptions for everything
+            todo_data = db.query(Todos).filter(Todos.id==todo_id).first()
+            if todo_data is not None:
+                return todo_data
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
+        
+        @router.post("/todo/", status_code=status.HTTP_201_CREATED)
+        async def create_todo(db: db_dependency, todo_request: TodoRequest):
+            todo_model = Todos(**todo_request.model_dump()) # Converting object to dictionary
+        
+            db.add(todo_model)
+            db.commit() # flushing and Actually doing transaction to database
+        
+        @router.put("/todo/{todo_id}/", status_code=status.HTTP_204_NO_CONTENT)
+        async def update_todo(db: db_dependency, todo_request: TodoRequest, todo_id: int = Path(gt=0)):
+            todo_model = db.query(Todos).filter(Todos.id == todo_id).first()
+            if todo_model is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo id not found")
+            todo_model.title = todo_request.title
+            todo_model.description = todo_request.description
+            todo_model.priority = todo_request.priority
+            todo_model.complete = todo_request.complete
+        
+            db.add(todo_model)
+            db.commit()
+        
+        @router.delete("/todo/{todo_id}/", status_code=status.HTTP_204_NO_CONTENT)
+        async def delete_todo(db: db_dependency, todo_id: int):
+            todo_model = db.query(Todos).filter(Todos.id == todo_id).first()
+            if todo_model is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo id not found")
+            db.query(Todos).filter(Todos.id == todo_id).delete()
+            db.commit()
 
+## User module(hash password using bcrypt)
+    Step1) Create User database and iam modifying todos and user table is the foreign key of todos table
+    Step1) update models.py
+        from database import Base
+        from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+        
+        class Users(Base):
+            __tablename__ = "users"
+            
+            id = Column(Integer, primary_key=True)
+            email = Column(String, unique=True)
+            username = Column(String, unique=True)
+            first_name = Column(String)
+            last_name = Column(String)
+            hashed_password = Column(String)
+            is_active = Column(Boolean)
+            default = Column(Boolean, default=True)
+            role = Column(String)
+        
+        class Todos(Base):
+            __tablename__ = 'todos' # Naming table
+        
+            id = Column(Integer, primary_key=True, index=True) # Id column
+            title = Column(String)
+            description = Column(String)
+            priority = Column(Integer)
+            complete = Column(Boolean, default=False)
+            owner_id = Column(Integer, ForeignKey("users.id"))
+
+    Step2) auth.py
+        from fastapi import APIRouter, Depends
+        from pydantic import BaseModel
+        from database import SessionLocal
+        from typing import Annotated
+        from sqlalchemy.orm import Session
+        from models import Users
+        from passlib.context import CryptContext
+        
+        router = APIRouter()
+        
+        bcrypt_context = CryptContext(schemes=['bcrypt'], deprecated="auto")
+        
+        class UserRequest(BaseModel):
+            email: str
+            username: str
+            first_name: str
+            last_name: str
+            password: str
+            is_active: bool
+            default: bool
+            role: str
+        
+        def get_db():
+            db = SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+        
+        db_dependency = Annotated[Session, Depends(get_db)]
+        
+        @router.post("/auth/")
+        async def create_user(db: db_dependency, user_request: UserRequest):
+            # we are not using **user_request since we are storing password as hashed_password in database
+            user_model = Users(
+                email = user_request.email,
+                username = user_request.username,
+                first_name = user_request.first_name,
+                last_name = user_request.last_name,
+                hashed_password = bcrypt_context.hash(user_request.password), # Hashing Here
+                is_active = user_request.is_active,
+                default = user_request.default,
+                role = user_request.role
+            )
+            db.add(user_model)
+            db.commit()
+        
 
 
         
