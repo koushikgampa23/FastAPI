@@ -207,7 +207,76 @@
     Step4) Run the application
         uvicorn main:app --reload
     Step5) See the results in pgadmin
-    
+## Crud operations with database(main crud)
+    Code:
+        from typing import Annotated
+        from fastapi import Depends, FastAPI, HTTPException, Path, status
+        from pydantic import BaseModel, Field
+        from models import Base, Todos
+        from database import SessionLocal, engine
+        from sqlalchemy.orm import Session
+        
+        app = FastAPI()
+        
+        Base.metadata.create_all(bind=engine) # will create everything from database.py file and models.py file to be able to create database with todo tables
+        
+        def get_db():
+            db = SessionLocal()
+            try:
+                yield db
+            finally:
+                db.close()
+        
+        db_dependency = Annotated[Session, Depends(get_db)]
+        # Depends is Dependency injection means we want to do something before it executes 
+        # That allows us to do something behind the scenes and then inject the dependencies that our function relies on
+        
+        class TodoRequest(BaseModel):
+            title: str = Field(min_length=3, max_length=100)
+            description: str
+            priority: int
+            complete: bool
+        
+        @app.get("/", status_code=status.HTTP_200_OK)
+        async def get_home(db: db_dependency):
+            return db.query(Todos).all()
+        
+        @app.get("/todo/{todo_id}/", status_code=status.HTTP_200_OK)
+        async def get_todo_details(db: db_dependency, todo_id: int = Path(gt=0)): # Here if the todo_id <0 it will throw exception that is default validation happening no need to exceptions for everything
+            todo_data = db.query(Todos).filter(Todos.id==todo_id).first()
+            if todo_data is not None:
+                return todo_data
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
+        
+        @app.post("/todo/", status_code=status.HTTP_201_CREATED)
+        async def create_todo(db: db_dependency, todo_request: TodoRequest):
+            todo_model = Todos(**todo_request.model_dump()) # Converting object to dictionary
+        
+            db.add(todo_model)
+            db.commit() # flushing and Actually doing transaction to database
+        
+        @app.put("/todo/{todo_id}/", status_code=status.HTTP_204_NO_CONTENT)
+        async def update_todo(db: db_dependency, todo_request: TodoRequest, todo_id: int = Path(gt=0)):
+            todo_model = db.query(Todos).filter(Todos.id == todo_id).first()
+            if todo_model is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo id not found")
+            todo_model.title = todo_request.title
+            todo_model.description = todo_request.description
+            todo_model.priority = todo_request.priority
+            todo_model.complete = todo_request.complete
+        
+            db.add(todo_model)
+            db.commit()
+        
+        @app.delete("/todo/{todo_id}/", status_code=status.HTTP_204_NO_CONTENT)
+        async def delete_todo(db: db_dependency, todo_id: int):
+            todo_model = db.query(Todos).filter(Todos.id == todo_id).first()
+            if todo_model is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="todo id not found")
+            db.query(Todos).filter(Todos.id == todo_id).delete()
+            db.commit()
+
+
         
 
 
