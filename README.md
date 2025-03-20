@@ -441,7 +441,26 @@
             )
             db.add(user_model)
             db.commit()
+## Authentication
+    if we use OAuth2PasswordRequestForm that gives the authentication behaviour to the endpoint
+    if we access this endpoint it asks for username, password, client id(optional), client secret(optional)
+    Code:
+        from fastapi.security import OAuth2PasswordRequestForm
+        # Function for authentication
+        def authenticate_user(username: str, password: str, db):
+            user = db.query(Users).filter(Users.username == username).first()
+            if not user: # Nothing from database
+                return False
+            if not bcrypt_context.verify(password, user.hashed_password): # not correct password
+                return False
+            return True
         
+        @router.post("/token/")
+        async def login_for_access_token(formdata: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
+            user = authenticate_user(formdata.username, formdata.password, db)
+            if not user:
+                return "Failed authentication"
+            return "authentication success"
 
 
         
