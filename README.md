@@ -464,7 +464,9 @@
 
 ![tcsglobal udemy com_course_fastapi-the-complete-course_learn_lecture_29025928](https://github.com/user-attachments/assets/e19df233-cad9-4d9d-b36e-ba5cf5a7c211)
 
-
+## JSON web tokens
+    Q) What is JSON web tokens?
+    
 
 
 
