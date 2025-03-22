@@ -466,6 +466,73 @@
 
 ## JSON web tokens
     Q) What is JSON web tokens?
+    JSON web token is a self contained way to securly transmit data and information between two parts using json object.
+    Json web tokens are trusted since each token is digitally signed, which in return allows server to know if the jwt token has been changed at all.
+    Jwt can be used when dealing with authorization.
+    JWT is the great way to exchange information between client and server.
+    JWT Structure
+          Header - contains algo and type of token, header is encoded with base 64.
+          payload - contains actual data of the user. The payloads data contains claims. and there are three different claims
+                      Registered - Iss(Issuer), sub(subject), exp(expiry)
+                      Public 
+                      Private
+                  It is also encoded with base 64
+          signature - JWT Signature is created by using the algorithm in the header to hash out the encoded header, encoded payload with a secret.
+                      The secret can be anything that has been saved some where in the server not accessable to the client.
+### Generating JWT tokens
+    Step1) pip install "pyjwt"
+    import jwt
+    # Function to generate jwt key
+        def create_access_token(username: str, user_id: int, expires_delta: timedelta):
+            encode = {"sub": username, "id": user_id}
+            expires = datetime.now(timezone.utc) + expires_delta
+            encode.update({"exp": expires})
+            return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+    Now our existing code changed like this
+        def authenticate_user(username: str, password: str, db):
+            user = db.query(Users).filter(Users.username == username).first()
+            if not user: # Nothing from database
+                return False
+            if not bcrypt_context.verify(password, user.hashed_password): # not correct password
+                return False
+            return user
+            
+        @router.post("/token/", response_model=Token)
+        async def login_for_access_token(formdata: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
+            user = authenticate_user(formdata.username, formdata.password, db)
+            if not user:
+                return "Failed authentication"
+            token = create_access_token(user.username, user.id, timedelta(minutes=10))
+            return {"access_token": token, "token_type": "Bearer"}
+### Verifying jwt token
+    Step1) from fastapi.security import OAuth2PasswordBearer #This can be used later for depency injection
+    Step2) Intialize it and point to a url
+        oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
+    Step3) Create a function to verify credentials and return username and user_id
+        Code:
+            async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+            try:
+                payload = jwt.decode(token, SECRET_KEY, algorithms=ALGORITHM)
+                username: str = payload.get("sub")
+                user_id: int = payload.get("user_id")
+                if username is None or user_id is None:
+                    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="couldnot validate details")
+                return {"username": username, "user_id": user_id}
+            except Exception as e:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="couldnot validate details")
+    
+## Code cleanups
+    if change route to this
+        router = APIRouter(
+            prefix="/auth",
+            tags=["auth"]
+        )
+        this will add auth as the prefix path of all the routers that are created in this file
+        tag acts as a title in the swagger
+    
+
+                      
+          
     
 
 
