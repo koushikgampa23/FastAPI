@@ -529,6 +529,84 @@
         )
         this will add auth as the prefix path of all the routers that are created in this file
         tag acts as a title in the swagger
+
+## Alembic
+    What is Alembic and why do we need this?
+        Lightweight database migration tool for when using SQLAlchemy
+        Migration tools allows us to plan, transfer and upgrade within our database.
+        Alembic allows us to change SQLAlchemy database table after it has been created.
+        Currently SQLAlchemy will create table for us, but we cannot enhance it.
+    Some more details:
+    Alembic provides the create and invocation change management scripts
+    this allows you to be able to create migration environment and able to change data how you like.
+    It is a powerful migration tool that allows us to modify database schema.
+    As the application evolves our database will need to evolve as well
+    Helps us to modifying database to keep up with the rapid development growth.
+    Step1) install alembic
+        pip install alembic
+    Step2) Alembic Commands
+        alembic init<folder name> - initializes new, generic environment
+        alembic revision -m <message> - Creates a new revision of the environment
+        alembic upgrade<revision #> - Run upgrade migration to database
+        alembic downgrade -1 - Run downgrade migration to databse
+### How does alembic work?
+    After we initilize our application with alembic, two new things will be appered in our directory.
+    alembic.ini
+    alembic directory
+    These are automatically created so we can upgrade, downgrade and keep data integrity of the application
+    alembic.ini
+        file that alembic looks when invoked
+        contains a bunch of configuration information for alembic that we are able to change to match our project.
+    alembic Directory
+        has all environment properties for alembic.
+        Holds all the revisions of the application.
+        where we can call the migrations for upgrading
+        where we can call the migrations for downgrading.
+    Run the init command
+        alembic init alembic(foldername)
+### Alembic Revision ?
+    Alembic revision is how we create a new alembic file where we can add some type of database upgrade.
+    when we run:
+        alembic revision -m "create phone_number col on user table"
+        create a new file where we can write the upgrade code.
+        each new revision will have revised id.
+### Alembic upgrade and downgrade?
+    Alembic upgrade
+        Alembic upgrade is how we actually run the migration
+        def upgrade() -> None:
+            op.add_column('users', sa.Column('phone_number', sa.String(), nullable=True))
+        Enhances our database to now have a new column within our user tables called phone_number
+        Previous data within our database doesnt change.
+        Run upgrade command:
+            alembic upgrade <revision id>
+        This will successfully implement the change within the upgrade functionality.
+    Alembic downgrade
+        In the same file we can also write downgrade functionality.
+        def downgrade() -> None:
+            op.drop_column('users', 'phone_number')
+        Reverts our database to remove last migration change.
+        previous data within database will not change unless it was on the colum 'phone_number' because we deleted it.
+        Run downgrade migration command:
+            alembic downgrade -1
+### Excute downgrade and upgrade in the code
+    step1) alembic revision -m "Create phone_number column on user table"
+    Step2) open the generated file under alembic/versions/<random_id>create_phone_number_colum_on_user_table.pu
+    Step3) There we can find the generated code for upgrade and downgrade functions with pass statements.
+    Step4) In the upgrade function add this
+        op.add_column('users', sa.Column('phone_number', sa.String(), nullable=True))
+    Step5) Copy the revision id from the above file
+    Step6) command to upgrade
+        alembic upgrade 6c14b2d5f700
+        After execution it will show like this
+            Running upgrade  -> 6c14b2d5f700, create phonenumber col on user table
+    
+    
+
+    
+    
+    
+    
+        
     
 
                       
