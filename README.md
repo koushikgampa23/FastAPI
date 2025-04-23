@@ -602,6 +602,9 @@
 ### Note:
     SqlAlchemy will pick up on tables that doesnot exists, we use alembic only to enhance the table(like adding colums or dropping colums).
     In other words SQLAlchemy will create table if table doesnt exist.
+
+## Python Asyncio
+    
     
     
 
