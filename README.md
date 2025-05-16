@@ -603,7 +603,148 @@
     SqlAlchemy will pick up on tables that doesnot exists, we use alembic only to enhance the table(like adding colums or dropping colums).
     In other words SQLAlchemy will create table if table doesnt exist.
 
-## Python Asyncio
+## Pytests
+### Installation
+    pip install pytest
+    pip install pytest-mock
+### Unit Test
+    Unit test is the smallest type of test and its typically testing one very small component of code
+    It might be a function, method, class
+    To ensure that you get the expected output or result from a small unit of code
+    Why we write unit test:
+        To cover majority of the code
+        ensure that all of the small components are working as they should be
+        if we do get a error we isolate where it comes from and fix it very easily
+    we can write integration test, end to end test, system test
+#### Run first unit test
+    1) Create a main.py file
+        Code:
+            def get_weather(temp):
+                if temp > 20:
+                    return "Hot"
+                else:
+                    return "Cold"
+    2) Create a file test_main.py (naming convention test_<filename that i want to test>.py
+        Code:
+            from main import get_weather
+            def test_get_weather():
+                assert get_weather(21) == "Hot"
+                assert get_weather(10) == "Cold"
+            Assert is going to check the return with the expected result
+    3) In the terminal use:
+        pytest test_main.py
+#### Unit for exception
+    For example if a function throws an exception how to write test case
+    Code:
+        def divide(a,b):
+            if b == 0:
+                raise ValueError("B cant be zero")
+            return a/b
+    Test:
+        def test_divide():
+            with pytest.raises(ValueError, match="B cant be zero"):
+                divide(10,0)
+            assert divide(10,20) == 0.5
+        if i change the match statement even one letter i will get errror test case failed
+#### Fixture
+    fixture is something, that you can have run before every single test
+    In simple words consider i have a class i need to reinstanlize my class object before every single test.
+    Code:
+        # Lets create a user manager class
+        class UserManager:
+            def __init__(self):
+                self.users = {}
+            
+            def add_user(self, username, email):
+                if username in self.users:
+                    raise ValueError("User already exists")
+                self.users[username] = email
+                return True
+            
+            def get_user(self, username):
+                return self.users.get(username)
+    Test Code:
+        @pytest.fixture
+        def user_manager():
+            """Creates a fresh instance of UserManager before each test"""
+            return UserManager()
+        
+        def test_add_user(user_manager):
+            assert user_manager.add_user("abc", "abc@gmail.com") == True
+            assert user_manager.get_user("abc") == "abc@gmail.com"
+        
+        def test_add_duplicate_user(user_manager):
+            user_manager.add_user("abc", "abc@gmail.com") # Since we are using fixture it is created new class instance that means self.users={} from the above function it is not forwarded
+            with pytest.raises(ValueError, match="User already exists"):
+                user_manager.add_user("abc", "abc@gmail.com")
+#### yield
+    It will yield the database when it is going to be used and after the task it is going to run the statements after yield like clearing operations
+    Anything before yield will run before the test as a setup operation and anything after yield will run after the test as a teardown operation
+    main Code:
+        class UserManager:
+            """"Simulate a basic user database"""
+            def __init__(self):
+                self.users = {}
+            
+            def add_user(self, username, email):
+                if username in self.users:
+                    raise ValueError("User already exists")
+                self.users[username] = email
+                return True
+            
+            def get_user(self, username):
+                return self.users.get(username)
+            
+            def delete_user(self, username):
+                if username in self.users:
+                    del self.users[username]
+    Test code:
+        @pytest.fixture
+        def user_manager():
+            """Creates a fresh instance of UserManager before each test"""
+            user_db = UserManager()
+            yield user_db # Provide the fixture instance
+            user_db.users.clear() # Clean up step (not needed in in-memory, but useful for real db's)
+        
+        def test_add_user(user_manager):
+            user_manager.add_user("abc", "abc@gmail.com")
+            assert user_manager.get_user("abc") == "abc@gmail.com"
+        
+        def test_add_duplicate_user(user_manager):
+            user_manager.add_user("abc", "abc@gmail.com") # Since we are using fixture it is created new class instance that means self.users={} from the above function it is not forwarded
+            with pytest.raises(ValueError, match="User already exists"):
+                user_manager.add_user("abc", "abc@gmail.com")
+        
+        def test_delete_user(user_manager):
+            user_manager.add_user("abc", "abc@gmail.com")
+            assert user_manager.delete_user("abc") is None
+#### Parameterized Testing
+    This is allows us to write mulitple testing fastly
+    If i want to test prime number or not
+    Code:
+        def is_prime(num):
+            if num < 2:
+                return False
+            for i in range(2, int(num**0.5)+1):
+                if num%i == 0:
+                    return False
+            return True
+    Test Code:
+        import pytest
+        from prime import is_prime
+        
+        @pytest.mark.parametrize("num, expected", [
+            (1,False),
+            (2, True),
+            (3,True),
+            (20, False),
+        ])
+        def test_is_prime(num, expected): # params should match above if i want change num to custom_num then change above as well 
+            assert is_prime(num) == expected
+            # Instead of writing like assert is_prime(10) == False, assert is_prime(11) == True     
+        
+    
+    
     
     
     
